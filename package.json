@@ -1,0 +1,32 @@
+{
+  "name": "most-data-mssql",
+  "version": "0.1.0",
+  "description": "MOST Web Framework MSSQL Data Adapter",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/kbarbounakis/most-data-mssql.git"
+  },
+  "keywords": [
+    "data",
+    "db",
+    "mssql",
+    "orm",
+    "most",
+    "database"
+  ],
+  "author": "Kyriakos Barbounakis <k.barbounakis@gmail.com>",
+  "license": "BSD3-Clause",
+  "bugs": {
+    "url": "https://github.com/kbarbounakis/most-data-mssql/issues"
+  },
+  "homepage": "https://github.com/kbarbounakis/most-data-mssql",
+  "dependencies": {
+    "async": "^1.4.2",
+    "most-query": "~0.1.21",
+    "mssql": "^0.5.5"
+  }
+}
