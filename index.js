@@ -11,9 +11,7 @@
 var mssql = require('mssql'),
     async = require('async'),
     util = require('util'),
-    array = require('most-array'),
-    qry = require('most-query'),
-    mysql=require('mysql');
+    qry = require('most-query');
 
 /**
  * @class MSSqlAdapter
@@ -46,18 +44,16 @@ function MSSqlAdapter(options)
     Object.defineProperty(this, 'connectionString', {
         get: function() {
             var keys = Object.keys(self.options);
-            return array(keys).select(function(x) {
+            return keys.map(function(x) {
                 return x.concat('=',self.options[x]);
-            }).toArray().join(';');
-
+            }).join(';');
         }, configurable:false, enumerable:false
     });
 }
 
 MSSqlAdapter.prototype.prepare = function(query,values)
 {
-    var mysql=require('mysql');
-    return mysql.format(query,values);
+    return qry.prepare(query,values);
 };
 
 /**
@@ -439,7 +435,7 @@ MSSqlAdapter.prototype.table = function(name) {
          */
         exists:function(callback) {
             callback = callback || function() {};
-            self.execute('SELECT COUNT(*) AS [count] FROM sys.objects WHERE [name]=? AND [type]=\'U\' AND SCHEMA_NAME([uid])=?',
+            self.execute('SELECT COUNT(*) AS [count] FROM sysobjects WHERE [name]=? AND [type]=\'U\' AND SCHEMA_NAME([uid])=?',
                 [ table, owner ], function(err, result) {
                     if (err) { return callback(err); }
                     callback(null, result[0].count);
@@ -492,11 +488,11 @@ MSSqlAdapter.prototype.table = function(name) {
                 return !x.oneToMany;
             }).map(
                 function(x) {
-                    return MSSqlAdapter.format('`%f` %t', x);
+                    return MSSqlAdapter.format('[%f] %t', x);
                 }).join(', ');
             //add primary key constraint
             var strPKFields = fields.filter(function(x) { return (x.primary == true || x.primary == 1); }).map(function(x) {
-                return MSSqlAdapter.format('`%f`', x);
+                return MSSqlAdapter.format('[%f]', x);
             }).join(', ');
             if (strPKFields.length>0) {
                 strFields += ', ' + util.format('PRIMARY KEY (%s)', strPKFields);
@@ -629,8 +625,7 @@ MSSqlAdapter.prototype.view = function(name) {
                     if (err) { tr(err); return; }
                     try {
                         var formatter = new MSSqlFormatter();
-                        var sql = util.format('CREATE VIEW %s.%s AS ',formatter.escapeName(owner), formatter.escapeName(view));
-                        sql += formatter.format(q);
+                        var sql = "EXECUTE('" + util.format('CREATE VIEW %s.%s AS ',formatter.escapeName(owner), formatter.escapeName(view)) + formatter.format(q) + "')";
                         self.execute(sql, [], tr);
                     }
                     catch(e) {
@@ -799,6 +794,17 @@ MSSqlAdapter.queryFormat = function (query, values) {
         return txt;
     }.bind(this));
 };
+
+
+function zeroPad(number, length) {
+    number = number || 0;
+    var res = number.toString();
+    while (res.length < length) {
+        res = '0' + res;
+    }
+    return res;
+}
+
 /**
  * @class MSSqlFormatter
  * @constructor
@@ -834,7 +840,7 @@ MSSqlFormatter.prototype.formatLimitSelect = function(obj) {
         //delete row index field
         qfields.pop();
         var fields = [];
-        array(qfields).each(function (x) {
+        qfields.forEach(function (x) {
             if (typeof x === 'string') {
                 fields.push(new qry.classes.QueryField(x));
             }
@@ -843,9 +849,9 @@ MSSqlFormatter.prototype.formatLimitSelect = function(obj) {
                 fields.push(field.as() || field.name());
             }
         });
-        sql = util.format('SELECT %s FROM (%s) t0 WHERE __RowIndex BETWEEN %s AND %s', array(fields).select(function (x) {
+        sql = util.format('SELECT %s FROM (%s) t0 WHERE __RowIndex BETWEEN %s AND %s', fields.map(function (x) {
             return self.format(x, '%f');
-        }).toArray().join(', '), subQuery, obj.$skip + 1, obj.$skip + obj.$take);
+        }).join(', '), subQuery, obj.$skip + 1, obj.$skip + obj.$take);
     }
     return sql;
 };
@@ -870,7 +876,7 @@ MSSqlFormatter.prototype.$indexof = function(p0, p1)
 MSSqlFormatter.prototype.escape = function(value,unquoted)
 {
     if (value==null || typeof value==='undefined')
-        return mysql.escape(null);
+        return qry.escape(null);
 
     if(typeof value==='string')
         return '\'' + value.replace(/'/g, "''") + '\'';
@@ -881,15 +887,33 @@ MSSqlFormatter.prototype.escape = function(value,unquoted)
     {
         //add an exception for Date object
         if (value instanceof Date)
-            return mysql.escape(value);
+            return this.escapeDate(value);
         if (value.hasOwnProperty('$name'))
             return value.$name;
     }
     if (unquoted)
         return value.valueOf();
     else
-        return mysql.escape(value);
-}
+        return qry.escape(value);
+};
+
+/**
+ * @param {Date|*} val
+ * @returns {string}
+ */
+MSSqlFormatter.prototype.escapeDate = function(val) {
+    var year   = val.getFullYear();
+    var month  = zeroPad(val.getMonth() + 1, 2);
+    var day    = zeroPad(val.getDate(), 2);
+    var hour   = zeroPad(val.getHours(), 2);
+    var minute = zeroPad(val.getMinutes(), 2);
+    var second = zeroPad(val.getSeconds(), 2);
+    var millisecond = zeroPad(val.getMilliseconds(), 3);
+    //format timezone
+    var offset = val.getTimezoneOffset(),
+        timezone = (offset<=0 ? '+' : '-') + zeroPad(-Math.floor(offset/60),2) + ':' + zeroPad(offset%60,2);
+    return "'" + year + '-' + month + '-' + day + ' ' + hour + ':' + minute + ':' + second + "." + millisecond + timezone + "'";
+};
 
 
 /**

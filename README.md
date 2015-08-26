@@ -1,4 +1,4 @@
-# most-data-mssql (in progress - separate adapter from most-data core)
+# most-data-mssql
 Most Web Framework MSSQL Adapter
 ##Install
 $ npm install most-data-mssql
@@ -14,8 +14,7 @@ Register MSSQL adapter on app.json as follows:
         ...
         { "name":"development", "invariantName":"mssql", "default":true,
             "options": {
-              "host":"localhost",
-              "port":1433,
+              "server":"localhost",
               "user":"user",
               "password":"password",
               "database":"test"
