@@ -771,7 +771,7 @@ MSSqlAdapter.prototype.migrate = function(obj, callback) {
                             migration.model,
                             migration.version,
                             migration.description ], function(err) {
-                            if (err) throw err;
+                            if (err) { return cb(err); }
                             return cb(null, 1);
                         });
                     }
