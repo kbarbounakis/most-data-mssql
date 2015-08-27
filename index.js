@@ -867,11 +867,20 @@ MSSqlFormatter.prototype.$indexof = function(p0, p1)
     return 'PATINDEX('.concat( this.escape(p1),',',this.escape(p0),')');
 };
 
+/**
+ * Implements indexOf(str,substr) expression formatter.
+ * @param {string|*} p0 The source string or field
+ * @param {string|*} p1 The string to search for
+ */
+MSSqlFormatter.prototype.$text = function(p0, p1)
+{
+    return 'PATINDEX('.concat(this.escape('%' + p1 + '%s'),',',this.escape(p0),') >= 1');
+};
 
 /**
  * Escapes an object or a value and returns the equivalen sql value.
  * @param {*} value
- * @param {boolean|*} unquoted
+ * @param {boolean=} unquoted
  */
 MSSqlFormatter.prototype.escape = function(value,unquoted)
 {
@@ -925,6 +934,16 @@ MSSqlFormatter.prototype.$startswith = function(p0, p1)
 {
     p1='%' +p1 + '%';
     return util.format('PATINDEX (%s,%s)', this.escape(p1), this.escape(p0));
+};
+
+/**
+ * Implements contains(a,b) expression formatter.
+ * @param p0 {*}
+ * @param p1 {*}
+ */
+MSSqlFormatter.prototype.$text = function(p0, p1)
+{
+    return util.format('PATINDEX (%s,%s) >= 1', this.escape('%' + p1 + '%s'), this.escape(p0));
 };
 
 /**
