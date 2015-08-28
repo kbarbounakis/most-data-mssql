@@ -921,7 +921,7 @@ MSSqlFormatter.prototype.escapeDate = function(val) {
     //format timezone
     var offset = val.getTimezoneOffset(),
         timezone = (offset<=0 ? '+' : '-') + zeroPad(-Math.floor(offset/60),2) + ':' + zeroPad(offset%60,2);
-    return "'" + year + '-' + month + '-' + day + ' ' + hour + ':' + minute + ':' + second + "." + millisecond + timezone + "'";
+    return "CONVERT(datetimeoffset,'" + year + '-' + month + '-' + day + ' ' + hour + ':' + minute + ':' + second + "." + millisecond + timezone + "')";
 };
 
 
