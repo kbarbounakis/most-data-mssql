@@ -897,7 +897,6 @@ MSSqlFormatter.prototype.$date = function(p0) {
     //TODO:: check date type
     return util.format(' TODATETIMEOFFSET (%s,datepart(TZ,SYSDATETIMEOFFSET()))', this.escape(p0));
 };
-
 /**
  * Escapes an object or a value and returns the equivalen sql value.
  * @param {*} value
