@@ -736,7 +736,7 @@ MSSqlAdapter.prototype.migrate = function(obj, callback) {
                                     }
                                     else {
                                         //get new type
-                                        newType = MySqlAdapter.format('%t', x);
+                                        newType = MSSqlAdapter.format('%t', x);
                                         //get old type
                                         oldType = column.type1.replace(/\s+$/,'') + ((column.nullable==true || column.nullable == 1) ? ' null' : ' not null');
                                         //remove column from collection
