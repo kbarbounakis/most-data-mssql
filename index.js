@@ -918,12 +918,22 @@ MSSqlFormatter.prototype.escape = function(value,unquoted)
         if (value instanceof Date)
             return this.escapeDate(value);
         if (value.hasOwnProperty('$name'))
-            return value.$name;
+            return this.escapeName(value.$name);
     }
     if (unquoted)
         return value.valueOf();
     else
         return qry.escape(value);
+};
+
+MSSqlFormatter.prototype.escapeName = function(name) {
+    if (typeof name === 'string') {
+        if (/^(\w+)\.(\w+)$/g.test(name)) {
+            return name.replace(/(\w+)/g, this.settings.nameFormat);
+        }
+        return name.replace(/(\w+)$|^(\w+)$/g, this.settings.nameFormat);
+    }
+    return name;
 };
 
 /**
