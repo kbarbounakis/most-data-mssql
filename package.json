@@ -27,6 +27,6 @@
   "dependencies": {
     "async": "^1.4.2",
     "most-query": "~0.1.21",
-    "mssql": "^0.5.5"
+    "mssql": "^3.0.0"
   }
 }
