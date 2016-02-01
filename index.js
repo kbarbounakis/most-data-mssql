@@ -929,9 +929,9 @@ MSSqlFormatter.prototype.escape = function(value,unquoted)
 MSSqlFormatter.prototype.escapeName = function(name) {
     if (typeof name === 'string') {
         if (/^(\w+)\.(\w+)$/g.test(name)) {
-            return name.replace(/(\w+)/g, this.settings.nameFormat);
+            return name.replace(/(\w+)/g, "[$1]");
         }
-        return name.replace(/(\w+)$|^(\w+)$/g, this.settings.nameFormat);
+        return name.replace(/(\w+)$|^(\w+)$/g, "[$1]");
     }
     return name;
 };
