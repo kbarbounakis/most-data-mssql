@@ -1,6 +1,6 @@
 {
   "name": "most-data-mssql",
-  "version": "0.1.10",
+  "version": "0.1.11",
   "description": "MOST Web Framework MSSQL Data Adapter",
   "main": "index.js",
   "scripts": {
