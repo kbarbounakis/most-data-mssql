@@ -288,6 +288,9 @@ MSSqlAdapter.prototype.execute = function(query, values, callback) {
                     if (process.env.NODE_ENV==='development') {
                         console.log(util.format('SQL (Execution Time:%sms):%s, Parameters:%s', (new Date()).getTime()-startTime, sql, JSON.stringify(values)));
                     }
+                    if (err) {
+                        console.log(util.format('SQL (Execution Error):%s, %s',err.message, preparedSql));
+                    }
                     if(typeof query.$insert==='undefined')
                         callback.call(self, err, result);
                     else {
