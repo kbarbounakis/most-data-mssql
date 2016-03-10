@@ -886,14 +886,23 @@ MSSqlFormatter.prototype.$text = function(p0, p1)
  */
 MSSqlFormatter.prototype.$regex = function(p0, p1)
 {
-    //escape expression
-    var s1 = this.escape(p1, true);
+    var s1;
     //implement starts with equivalent for PATINDEX T-SQL
-    s1 = s1.replace(/^\^/, (/^\^/.test(s1) ? '' : '%'));
+    if (/^\^/.test(p1)) {
+        s1 = p1.replace(/^\^/,'');
+    }
+    else {
+        s1 = '%' + p1;
+    }
     //implement ends with equivalent for PATINDEX T-SQL
-    s1 = s1.replace(/\$$/, (/\$$/.test(s1) ? '' : '%'));
+    if (/\$$/.test(s1)) {
+        s1 = s1.replace(/\$$/,'');
+    }
+    else {
+        s1 = s1 + '%';
+    }
     //use patindex for text searching
-    return util.format('PATINDEX(\'%s\',%s) >= 1',s1, this.escape(p0));
+    return util.format('PATINDEX(%s,%s) >= 1',this.escape(s1), this.escape(p0));
 };
 
 MSSqlFormatter.prototype.$date = function(p0) {
@@ -976,7 +985,7 @@ MSSqlFormatter.prototype.$startswith = function(p0, p1)
  */
 MSSqlFormatter.prototype.$text = function(p0, p1)
 {
-    return util.format('PATINDEX (%s,%s) >= 1', this.escape('%' + p1 + '%s'), this.escape(p0));
+    return util.format('PATINDEX (%s,%s)', this.escape('%' + p1 + '%'), this.escape(p0));
 };
 
 /**
