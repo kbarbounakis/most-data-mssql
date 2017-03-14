@@ -1,10 +1,10 @@
 # most-data-mssql
 Most Web Framework MSSQL Adapter
 
-##Install
-$ npm install most-data-mssql
+### Install
+    $ npm install most-data-mssql
 
-##Usage
+### Usage
 Register MSSQL adapter on app.json as follows:
 
     "adapterTypes": [
