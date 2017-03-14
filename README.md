@@ -25,7 +25,7 @@ Register MSSQL adapter on app.json as follows:
 
 If you are intended to use MSSQL data adapter as the default database adapter set the property "default" to true.
 
-# Connect to Azure Databases
+### Connect to Azure Databases
 
 If you are going to use adapter against Azure databases you must always enable encrypt option in your connection settings:
 
