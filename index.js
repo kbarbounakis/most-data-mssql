@@ -1210,33 +1210,24 @@ MSSqlFormatter.prototype.$trim = function(p0)
     return util.format('LTRIM(RTRIM((%s)))', this.escape(p0));
 };
 
-if (typeof exports !== 'undefined')
-{
-    module.exports = {
-        /**
-         * @class MSSqlAdapter
-         * */
-        MSSqlAdapter : MSSqlAdapter,
-        /**
-         * @class MSSqlFormatter
-         * */
-        MSSqlFormatter : MSSqlFormatter,
-        /**
-         * Creates an instance of MSSqlAdapter object that represents a MsSql database connection.
-         * @param options An object that represents the properties of the underlying database connection.
-         * @returns {DataAdapter}
-         */
-        createInstance: function(options) {
-            return new MSSqlAdapter(options);
-        },
-        /**
-         * Formats the query command by using the object provided e.g. SELECT * FROM Table1 WHERE id=:id
-         * @param query {string}
-         * @param values {*}
-         */
-        queryFormat: function(query, values) {
-            return MSSqlAdapter.queryFormat(query, values);
-        }
+if (typeof exports !== 'undefined') {
 
-    }
+    module.exports.MSSqlAdapter = MSSqlAdapter;
+    module.exports.MSSqlFormatter = MSSqlFormatter;
+    /**
+     * Creates an instance of MSSqlAdapter object that represents a MsSql database connection.
+     * @param {*} options An object that represents the properties of the underlying database connection.
+     * @returns {DataAdapter|*}
+     */
+    module.exports.createInstance = function (options) {
+        return new MSSqlAdapter(options);
+    };
+    /**
+     * Formats the query command by using the object provided e.g. SELECT * FROM Table1 WHERE id=:id
+     * @param query {string}
+     * @param values {*}
+     */
+    module.exports.queryFormat = function (query, values) {
+        return MSSqlAdapter.queryFormat(query, values);
+    };
 }
