@@ -363,6 +363,9 @@ MSSqlAdapter.formatType = function(field)
         case 'Time':
             s = 'time';
             break;
+        case 'Timestamp':
+            s = 'timestamp';
+            break;
         case 'Integer':
         case 'Duration':
             s = 'int';
@@ -485,7 +488,7 @@ MSSqlAdapter.prototype.table = function(name) {
             if (fields.length === 0) {
                 return callback(new Error('Invalid argument. Fields collection cannot be empty.'))
             }
-            var strFields =  _.map(_.filter(function(x) {
+            var strFields =  _.map(_.filter(fields, function(x) {
                     return !x.oneToMany;
                 }),
                 function(x) {
