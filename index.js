@@ -1,7 +1,7 @@
 /**
  * MOST Web Framework
  * A JavaScript Web Framework
- * http://themost.io
+ * https://themost.io
  *
  * Copyright (c) 2014, Kyriakos Barbounakis k.barbounakis@gmail.com, Anthi Oikonomou anthioikonomou@gmail.com
  *
@@ -9,6 +9,7 @@
  * Date: 2014-01-25
  */
 var mssql = require('mssql'),
+    _ = require('lodash'),
     async = require('async'),
     util = require('util'),
     qry = require('most-query');
@@ -77,7 +78,7 @@ MSSqlAdapter.prototype.open = function(callback)
         callback.call(self, err);
     });
 
-}
+};
 
 MSSqlAdapter.prototype.close = function() {
     var self = this;
@@ -91,11 +92,11 @@ MSSqlAdapter.prototype.close = function() {
             self.rawConnection = null;
         }
     });
-}
+};
 /**
  * Begins a data transaction and executes the given function
- * @param fn {Function}
- * @param callback {Function}
+ * @param {Function} fn
+ * @param {Function} callback
  */
 MSSqlAdapter.prototype.executeInTransaction = function(fn, callback) {
     var self = this;
@@ -167,12 +168,9 @@ MSSqlAdapter.prototype.executeInTransaction = function(fn, callback) {
            /* self.transaction.on('begin', function() {
                 console.log('begin transaction');
             });*/
-
-
-
         }
     });
-}
+};
 
 /**
  * Executes an operation against database and returns the results.
@@ -205,7 +203,7 @@ MSSqlAdapter.prototype.selectIdentity = function(entity, attribute , callback) {
             { name:'attribute', type:'Text', size:120 },
             { name:'value', type:'Integer' }
         ]
-    }
+    };
     //ensure increments entity
     self.migrate(migration, function(err)
     {
@@ -214,7 +212,7 @@ MSSqlAdapter.prototype.selectIdentity = function(entity, attribute , callback) {
 
         self.execute('SELECT * FROM increment_id WHERE entity=? AND attribute=?', [entity, attribute], function(err, result) {
             if (err) { callback.call(self,err); return; }
-            if (result.length==0) {
+            if (result.length===0) {
                 //get max value by querying the given entity
                 var q = qry.query(entity).select([qry.fields.max(attribute)]);
                 self.execute(q,null, function(err, result) {
@@ -254,7 +252,7 @@ MSSqlAdapter.prototype.execute = function(query, values, callback) {
     var self = this, sql = null;
     try {
 
-        if (typeof query == 'string') {
+        if (typeof query === 'string') {
             //get raw sql statement
             sql = query;
         }
@@ -328,7 +326,7 @@ MSSqlAdapter.format = function(format, obj)
     if (/%f/.test(format))
         result = result.replace(/%f/g,obj.name);
     return result;
-}
+};
 
 MSSqlAdapter.formatType = function(field)
 {
@@ -364,6 +362,9 @@ MSSqlAdapter.formatType = function(field)
             break;
         case 'Time':
             s = 'time';
+            break;
+        case 'Timestamp':
+            s = 'timestamp';
             break;
         case 'Integer':
         case 'Duration':
@@ -415,7 +416,7 @@ MSSqlAdapter.prototype.createView = function(name, query, callback) {
 /**
  * Initializes database table helper.
  * @param {string} name - The table name
- * @returns {{exists: Function, version: Function, columns: Function, create: Function, add: Function, change: Function}}
+ * @returns {{exists: Function, version: Function, columns: Function, create: Function, add: Function, change: Function, foreignKeys: Function, referencedKeys: Function}}
  */
 MSSqlAdapter.prototype.table = function(name) {
     var self = this, owner, table;
@@ -452,7 +453,7 @@ MSSqlAdapter.prototype.table = function(name) {
             self.execute('SELECT MAX([version]) AS [version] FROM [migrations] WHERE [appliesTo]=?',
                 [table], function(err, result) {
                     if (err) { return callback(err); }
-                    if (result.length==0)
+                    if (result.length===0)
                         callback(null, '0.0');
                     else
                         callback(null, result[0].version || '0.0');
@@ -484,18 +485,20 @@ MSSqlAdapter.prototype.table = function(name) {
             if (!util.isArray(fields)) {
                 return callback(new Error('Invalid argument type. Expected Array.'))
             }
-            if (fields.length == 0) {
+            if (fields.length === 0) {
                 return callback(new Error('Invalid argument. Fields collection cannot be empty.'))
             }
-            var strFields = fields.filter(function(x) {
-                return !x.oneToMany;
-            }).map(
+            var strFields =  _.map(_.filter(fields, function(x) {
+                    return !x.oneToMany;
+                }),
                 function(x) {
                     return MSSqlAdapter.format('[%f] %t', x);
                 }).join(', ');
             //add primary key constraint
-            var strPKFields = fields.filter(function(x) { return (x.primary == true || x.primary == 1); }).map(function(x) {
-                return MSSqlAdapter.format('[%f]', x);
+            var strPKFields = _.map(_.filter(fields, function(x) {
+                return (x.primary === true || x.primary === 1);
+            }), function(x) {
+                return MSSqlAdapter.format('[%f]', x)
             }).join(', ');
             if (strPKFields.length>0) {
                 strFields += ', ' + util.format('PRIMARY KEY (%s)', strPKFields);
@@ -519,7 +522,7 @@ MSSqlAdapter.prototype.table = function(name) {
                 //invalid argument exception
                 return callback(new Error('Invalid argument type. Expected Array.'))
             }
-            if (fields.length == 0) {
+            if (fields.length === 0) {
                 //do nothing
                 return callback();
             }
@@ -545,7 +548,7 @@ MSSqlAdapter.prototype.table = function(name) {
                 //invalid argument exception
                 return callback(new Error('Invalid argument type. Expected Array.'))
             }
-            if (fields.length == 0) {
+            if (fields.length === 0) {
                 //do nothing
                 return callback();
             }
@@ -556,6 +559,68 @@ MSSqlAdapter.prototype.table = function(name) {
             }).join(';');
             self.execute(sql, [], function(err) {
                 callback(err);
+            });
+        },
+        /**
+         * Returns an array of table foreign keys
+         * @param {Function} callback
+         */
+        foreignKeys: function(callback) {
+            return self.execute("SELECT OBJECT_NAME(a.constraint_object_id) AS [name], " +
+                "OBJECT_NAME(a.referenced_object_id) AS [parentModel]," +
+                "c.[name] as [parentField], OBJECT_NAME(a.parent_object_id) as [childModel], " +
+                "b.[name] AS [childField], " + "LOWER(fk.delete_referential_action_desc) as [cascadeDelete], " +
+                "LOWER(fk.update_referential_action_desc) as [cascadeUpdate] " + "FROM sys.foreign_key_columns a " +
+                "JOIN sys.columns b ON a.parent_column_id =b.column_id AND a.parent_object_id=b.[object_id] " +
+                "JOIN sys.columns c ON a.constraint_column_id=c.column_id AND a.referenced_object_id=c.[object_id] " +
+                "INNER JOIN sys.foreign_keys fk ON a.constraint_object_id = fk.object_id " +
+                "WHERE OBJECT_NAME(a.parent_object_id)=?", [name], function (err, result) {
+                if (err) {
+                    return callback(err);
+                }
+                var keys = [];
+                //search for composite foreign keys (these keys are not yet implemented and should be removed)
+                _.forEach(result, function (x) {
+                    var length = _.filter(result, function (y) {
+                        return x.name === y.name;
+                    }).length;
+                    if (length > 1) {
+                        if (process.env.NODE_ENV === 'development')
+                            util.log('A composite foreign key (' + x.name + ') was found in table ' + name + '. Composite foreign keys are not yet implemented and will be omitted.');
+                    } else {
+                        keys.push(x);
+                    }
+                });
+                return callback(null, keys);
+            });
+        },
+        referencedKeys: function(callback) {
+            return self.execute("SELECT OBJECT_NAME(a.constraint_object_id) AS [name], " +
+                "OBJECT_NAME(a.referenced_object_id) AS [parentModel]," +
+                "c.[name] as [parentField], OBJECT_NAME(a.parent_object_id) as [childModel], " +
+                "b.[name] AS [childField], " + "LOWER(fk.delete_referential_action_desc) as [cascadeDelete], " +
+                "LOWER(fk.update_referential_action_desc) as [cascadeUpdate] " + "FROM sys.foreign_key_columns a " +
+                "JOIN sys.columns b ON a.parent_column_id =b.column_id AND a.parent_object_id=b.[object_id] " +
+                "JOIN sys.columns c ON a.constraint_column_id=c.column_id AND a.referenced_object_id=c.[object_id] " +
+                "INNER JOIN sys.foreign_keys fk ON a.constraint_object_id = fk.object_id " +
+                "WHERE OBJECT_NAME(a.referenced_object_id)=?", [name], function (err, result) {
+                if (err) {
+                    return callback(err);
+                }
+                var keys = [];
+                //search for composite foreign keys (these keys are not yet implemented and should be removed)
+                _.forEach(result, function (x) {
+                    var length = _.filter(result, function (y) {
+                        return x.name === y.name;
+                    }).length;
+                    if (length > 1) {
+                        if (process.env.NODE_ENV === 'development')
+                            util.log('A composite foreign key (' + x.name + ') was found in table ' + name + '. Composite foreign keys are not yet implemented and will be omitted.');
+                    } else {
+                        keys.push(x);
+                    }
+                });
+                return callback(null, keys);
             });
         }
     }
@@ -648,11 +713,11 @@ MSSqlAdapter.prototype.view = function(name) {
  * @param {function(Error=,*=)} callback
  */
 MSSqlAdapter.prototype.migrate = function(obj, callback) {
-    if (obj==null)
+    if (obj===null)
         return;
     var self = this;
     var migration = obj;
-    if (typeof migration.appliesTo === 'undefined' || migration.appliesTo==null)
+    if (typeof migration.appliesTo === 'undefined' || migration.appliesTo===null)
         throw new Error("Invalid argument. Model name is undefined.");
     self.open(function(err) {
         if (err) {
@@ -702,7 +767,7 @@ MSSqlAdapter.prototype.migrate = function(obj, callback) {
                 function(arg, cb) {
                     //migration has already been applied
                     if (arg<0) { return cb(null, arg); }
-                    if (arg==0) {
+                    if (arg===0) {
                         //create table
                         return self.table(migration.appliesTo).create(migration.add, function(err) {
                             if (err) { return cb(err); }
@@ -730,7 +795,9 @@ MSSqlAdapter.prototype.migrate = function(obj, callback) {
                             if (err) { return cb(err); }
                             for (var i = 0; i < migration.add.length; i++) {
                                 var x = migration.add[i];
-                                column = columns.find(function(y) { return (y.name===x.name); });
+                                column = _.find(columns, function(y) {
+                                    return (y.name===x.name);
+                                });
                                 if (column) {
                                     //if column is primary key remove it from collection
                                     if (column.primary) {
@@ -741,7 +808,7 @@ MSSqlAdapter.prototype.migrate = function(obj, callback) {
                                         //get new type
                                         newType = MSSqlAdapter.format('%t', x);
                                         //get old type
-                                        oldType = column.type1.replace(/\s+$/,'') + ((column.nullable==true || column.nullable == 1) ? ' null' : ' not null');
+                                        oldType = column.type1.replace(/\s+$/,'') + ((column.nullable===true || column.nullable === 1) ? ' null' : ' not null');
                                         //remove column from collection
                                         migration.add.splice(i, 1);
                                         i-=1;
@@ -788,6 +855,127 @@ MSSqlAdapter.prototype.migrate = function(obj, callback) {
     });
 };
 
+MSSqlAdapter.prototype.indexes = function(table) {
+    var self = this, formatter = new MSSqlFormatter();
+    return {
+        list: function (callback) {
+            var thisArg = this;
+            if (thisArg.hasOwnProperty('indexes_')) {
+                return callback(null, thisArg['indexes_']);
+            }
+            var sql = "SELECT o.[name] AS [tableName], cols.[name] AS [columnName]," +
+                "i.[name] as [name], i.is_primary_key AS primaryKey, " +
+                "i.[type_desc] AS indexTypeDescription, c.is_descending_key [descendingKey], " +
+                "c.index_column_id [columnIndex] FROM sys.index_columns c " +
+                "INNER JOIN sys.indexes i ON i.object_id=c.object_id AND i.index_id=c.index_id " +
+                "INNER JOIN sys.objects o ON c.object_id=o.object_id " +
+                "INNER JOIN sys.columns cols ON o.object_id = cols.object_id AND c.column_id = cols.column_id " +
+                "WHERE o.name=?";
+            self.execute(sql, [table] , function (err, result) {
+                if (err) { return callback(err); }
+                var indexes = _.map( _.filter(result, function(x) {
+                    return x["primaryKey"] === false;
+                }),function(x) {
+                    return {
+                        name:x.name,
+                        columns: _.map(_.filter(result, function(y) {
+                            return y.name === x.name;
+                        }), function(y) {
+                           return y["columnName"];
+                        })
+                    }
+                });
+                thisArg['indexes_'] = indexes;
+                return callback(null, indexes);
+            });
+        },
+        /**
+         * @param {string} name
+         * @param {Array|string} columns
+         * @param {Function} callback
+         */
+        create: function(name, columns, callback) {
+            var thisArg = this;
+            var cols = [];
+            if (typeof columns === 'string') {
+                cols.push(columns)
+            }
+            else if (util.isArray(columns)) {
+                cols.push.apply(cols, columns);
+            }
+            else {
+                return callback(new Error("Invalid parameter. Columns parameter must be a string or an array of strings."));
+            }
+
+            this.list(function(err, indexes) {
+                if (err) { return callback(err); }
+                var ix = _.find(indexes, function(x) { return x.name === name; });
+                //format create index SQL statement
+                var sqlCreateIndex = util.format("CREATE INDEX %s ON %s(%s)",
+                    formatter.escapeName(name),
+                    formatter.escapeName(table),
+                    _.map(cols, function(x) {
+                        return formatter.escapeName(x)
+                    }).join(","));
+                if (typeof ix === 'undefined' || ix === null) {
+                    self.execute(sqlCreateIndex, [], function (err) {
+                        if (err) {
+                            return callback(err);
+                        }
+                        delete thisArg['indexes_'];
+                        return callback();
+                    });
+                }
+                else {
+                    var nCols = cols.length;
+                    //enumerate existing columns
+                    _.forEach(ix.columns, function(x) {
+                        if (cols.indexOf(x)>=0) {
+                            //column exists in index
+                            nCols -= 1;
+                        }
+                    });
+                    if (nCols>0) {
+                        //drop index
+                        this.drop(name, function(err) {
+                            if (err) { return callback(err); }
+                            //and create it
+                            self.execute(sqlCreateIndex, [], function (err) {
+                                if (err) {
+                                    return callback(err);
+                                }
+                                delete thisArg['indexes_'];
+                                return callback();
+                            });
+                        });
+                    }
+                    else {
+                        //do nothing
+                        return callback();
+                    }
+                }
+            });
+
+
+        },
+        drop: function(name, callback) {
+            var thisArg = this;
+            if (typeof name !== 'string') {
+                return callback(new Error("Name must be a valid string."))
+            }
+
+            var sql = "IF EXISTS(SELECT * FROM sys.indexes WHERE [name]='%s' AND object_id=OBJECT_ID('%s')) " +
+            "DROP INDEX [%s] ON [%s]";
+
+            self.execute(util.format(sql,name, table, name, table), null, function(err) {
+                if (err) { return callback(err); }
+                delete thisArg['indexes_'];
+                return callback();
+            });
+        }
+    }
+};
+
 MSSqlAdapter.queryFormat = function (query, values) {
     if (!values) return query;
     return query.replace(/:(\w+)/g, function (txt, key) {
@@ -831,19 +1019,19 @@ MSSqlFormatter.prototype.formatLimitSelect = function(obj) {
         obj.$skip= parseInt(obj.$skip) || 0;
         //add row_number with order
         var keys = Object.keys(obj.$select);
-        if (keys.length == 0)
+        if (keys.length === 0)
             throw new Error('Entity is missing');
-        var qfields = obj.$select[keys[0]], order =obj.$order;
-        qfields.push(util.format('ROW_NUMBER() OVER(%s) AS __RowIndex', order ? self.format(order, '%o') : 'ORDER BY (SELECT NULL)'));
+        var queryFields = obj.$select[keys[0]], order =obj.$order;
+        queryFields.push(util.format('ROW_NUMBER() OVER(%s) AS __RowIndex', order ? self.format(order, '%o') : 'ORDER BY (SELECT NULL)'));
         if (order)
             delete obj.$order;
         var subQuery = self.formatSelect(obj);
         if (order)
             obj.$order = order;
         //delete row index field
-        qfields.pop();
+        queryFields.pop();
         var fields = [];
-        qfields.forEach(function (x) {
+        _.forEach(queryFields, function (x) {
             if (typeof x === 'string') {
                 fields.push(new qry.classes.QueryField(x));
             }
@@ -910,13 +1098,13 @@ MSSqlFormatter.prototype.$date = function(p0) {
     return util.format(' TODATETIMEOFFSET (%s,datepart(TZ,SYSDATETIMEOFFSET()))', this.escape(p0));
 };
 /**
- * Escapes an object or a value and returns the equivalen sql value.
+ * Escapes an object or a value and returns the equivalent sql value.
  * @param {*} value
  * @param {boolean=} unquoted
  */
 MSSqlFormatter.prototype.escape = function(value,unquoted)
 {
-    if (value==null || typeof value==='undefined')
+    if (value===null || typeof value==='undefined')
         return qry.escape(null);
 
     if(typeof value==='string')
@@ -1025,33 +1213,24 @@ MSSqlFormatter.prototype.$trim = function(p0)
     return util.format('LTRIM(RTRIM((%s)))', this.escape(p0));
 };
 
-if (typeof exports !== 'undefined')
-{
-    module.exports = {
-        /**
-         * @class MSSqlAdapter
-         * */
-        MSSqlAdapter : MSSqlAdapter,
-        /**
-         * @class MSSqlFormatter
-         * */
-        MSSqlFormatter : MSSqlFormatter,
-        /**
-         * Creates an instance of MSSqlAdapter object that represents a MsSql database connection.
-         * @param options An object that represents the properties of the underlying database connection.
-         * @returns {DataAdapter}
-         */
-        createInstance: function(options) {
-            return new MSSqlAdapter(options);
-        },
-        /**
-         * Formats the query command by using the object provided e.g. SELECT * FROM Table1 WHERE id=:id
-         * @param query {string}
-         * @param values {*}
-         */
-        queryFormat: function(query, values) {
-            return MSSqlAdapter.queryFormat(query, values);
-        }
+if (typeof exports !== 'undefined') {
 
-    }
+    module.exports.MSSqlAdapter = MSSqlAdapter;
+    module.exports.MSSqlFormatter = MSSqlFormatter;
+    /**
+     * Creates an instance of MSSqlAdapter object that represents a MsSql database connection.
+     * @param {*} options An object that represents the properties of the underlying database connection.
+     * @returns {DataAdapter|*}
+     */
+    module.exports.createInstance = function (options) {
+        return new MSSqlAdapter(options);
+    };
+    /**
+     * Formats the query command by using the object provided e.g. SELECT * FROM Table1 WHERE id=:id
+     * @param query {string}
+     * @param values {*}
+     */
+    module.exports.queryFormat = function (query, values) {
+        return MSSqlAdapter.queryFormat(query, values);
+    };
 }
